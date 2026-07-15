@@ -790,7 +790,7 @@ const Detect = () => {
     async function loadModels() {
       try {
         const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+          publicAssetPath("/models/mediapipe/wasm")
         );
         handLandmarkerRef.current = await HandLandmarker.createFromOptions(
           vision,

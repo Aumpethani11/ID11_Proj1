@@ -1,36 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ExerciseType, Difficulty } from '../constants';
-import { verifySign } from '../services/geminiService';
-
-// Dictionary for descriptions in the practice screen
-const SIGN_DESCRIPTIONS = {
-  "A": "Fist with thumb on the side.",
-  "B": "Flat hand, thumb tucked across palm.",
-  "C": "Curved hand like the letter C.",
-  "D": "Index up, others circle with thumb.",
-  "E": "Fingers curled, thumb tucked under.",
-  "F": "Index and thumb touch (OK sign).",
-  "G": "Index and thumb pointing sideways.",
-  "H": "Index and middle pointing sideways.",
-  "I": "Pinky finger straight up.",
-  "J": "Pinky traces a J in the air.",
-  "K": "Index up, middle out, thumb on middle.",
-  "L": "Index up and thumb out (L shape).",
-  "M": "Three fingers over the thumb.",
-  "N": "Two fingers over the thumb.",
-  "O": "All fingers touch thumb in an O.",
-  "P": "Downward pointing K shape.",
-  "Q": "Downward pointing G shape.",
-  "R": "Index and middle fingers crossed.",
-  "S": "Tight fist, thumb across front.",
-  "T": "Thumb tucked under index finger.",
-  "U": "Index and middle up and touching.",
-  "V": "Index and middle up and spread.",
-  "W": "Three middle fingers spread up.",
-  "X": "Hooked index finger.",
-  "Y": "Pinky and thumb out.",
-  "Z": "Index draws a Z in the air."
-};
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ExerciseType, Difficulty, SIGN_DESCRIPTIONS, formatSignTitle } from '../constants';
+import {
+  verifySign,
+  preloadSignModels,
+  startHandTracking,
+  stopHandTracking,
+  isHandCurrentlyDetected,
+} from '../services/signModelService';
+import { SIGN_IMAGES, getSignImage } from '../constants/signImages';
 
 function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -39,50 +16,101 @@ function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
   const [feedback, setFeedback] = useState(null);
   const [xp, setXp] = useState(0);
   const [showHint, setShowHint] = useState(true);
+  const [handDetected, setHandDetected] = useState(false);
   
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
 
   const currentExercise = lesson.exercises[currentIndex];
 
-  useEffect(() => {
-    if (currentExercise.type === ExerciseType.SIGN_PRACTICE) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-  }, [currentIndex, currentExercise]);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      console.error("Camera access error:", err);
-    }
-  };
-
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
+    stopHandTracking();
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
-  };
+  }, []);
 
-  const captureFrame = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
-        return canvasRef.current.toDataURL('image/jpeg', 0.8).split(',')[1];
+  const startCamera = useCallback(async () => {
+    try {
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        await videoRef.current.play();
+
+        // Warm VIDEO-mode tracking immediately (same approach as Detect)
+        await preloadSignModels();
+        await startHandTracking(videoRef.current);
       }
+    } catch (err) {
+      console.error("Camera access error:", err);
     }
-    return null;
+  }, [stopCamera]);
+
+  useEffect(() => {
+    const isSignPractice = currentExercise?.type === ExerciseType.SIGN_PRACTICE;
+
+    if (isSignPractice) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+
+    return () => {
+      stopCamera();
+    };
+    // Only restart camera when the exercise index / type changes — not on re-renders
+  }, [currentIndex, currentExercise?.type, startCamera, stopCamera]);
+
+  // Poll tracker so the UI shows when a hand is locked before Check
+  useEffect(() => {
+    if (currentExercise?.type !== ExerciseType.SIGN_PRACTICE) {
+      setHandDetected(false);
+      return undefined;
+    }
+
+    const id = setInterval(() => {
+      setHandDetected(isHandCurrentlyDetected());
+    }, 150);
+
+    return () => clearInterval(id);
+  }, [currentIndex, currentExercise?.type]);
+
+  const waitForVideoFrame = async (video, timeoutMs = 4000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (
+        video &&
+        !video.paused &&
+        video.readyState >= 2 &&
+        video.videoWidth > 0 &&
+        video.videoHeight > 0
+      ) {
+        return true;
+      }
+
+      if (video?.paused) {
+        try {
+          await video.play();
+        } catch (_) {
+          // keep waiting
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return false;
   };
 
   const handleCheck = async () => {
@@ -96,12 +124,23 @@ function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
       });
       if (isCorrect) setXp(prev => prev + 10);
     } else if (currentExercise.type === ExerciseType.SIGN_PRACTICE) {
-      const frame = captureFrame();
-      if (frame) {
-        const result = await verifySign(frame, currentExercise.targetSign);
+      const video = videoRef.current;
+      const ready = await waitForVideoFrame(video);
+
+      if (!ready) {
+        setFeedback({
+          isCorrect: false,
+          message: "Camera is still starting. Hold your sign in frame and try again."
+        });
+      } else {
+        const result = await verifySign(video, currentExercise.targetSign);
         setFeedback({
           isCorrect: result.correct,
-          message: result.feedback
+          message: result.feedback,
+          prediction: result.prediction,
+          confidence: result.confidence,
+          targetConfidence: result.targetConfidence,
+          targetSign: currentExercise.targetSign,
         });
         if (result.correct) setXp(prev => prev + 15);
       }
@@ -169,33 +208,34 @@ function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full h-full object-cover -scale-x-100"
+                muted
+                className="w-full h-full object-contain bg-black -scale-x-100"
               />
-              <canvas ref={canvasRef} className="hidden" />
               
-              <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/20">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                Live Analysis
+              <div className={`absolute top-4 left-4 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/20 ${handDetected ? 'bg-emerald-600/80' : 'bg-black/40'}`}>
+                <div className={`w-2 h-2 rounded-full ${handDetected ? 'bg-emerald-300' : 'bg-red-500 animate-pulse'}`}></div>
+                {handDetected ? 'Hand Detected' : 'Show Your Hand'}
               </div>
             </div>
 
             {/* Reference Guide Panel */}
             {showHint && currentExercise.targetSign && (
-              <div className="w-full max-w-[300px] bg-white border-2 border-gray-200 rounded-[2rem] p-6 shadow-xl relative animate-in slide-in-from-right duration-300">
+              <div className="w-full max-w-[360px] bg-white border-2 border-gray-200 rounded-[2rem] p-6 shadow-xl relative animate-in slide-in-from-right duration-300">
                 <div className="flex flex-col items-center text-center">
-                   <div className="w-24 h-24 sm:w-32 sm:h-32 bg-[#ddf4ff] rounded-2xl mb-4 flex items-center justify-center overflow-hidden border-2 border-[#1cb0f6]/20">
-                      {/* Image Source for ASL finger spelling */}
+                   <div className="w-44 h-44 sm:w-56 sm:h-56 bg-[#ddf4ff] rounded-2xl mb-4 flex items-center justify-center overflow-hidden border-2 border-[#1cb0f6]/20">
                       <img 
-                        src={`https://www.lifeprint.com/asl101/fingerspelling/abc-gifs/${currentExercise.targetSign.toLowerCase()}.gif`}
+                        src={getSignImage(currentExercise.targetSign)}
                         alt={`ASL Sign for ${currentExercise.targetSign}`}
                         className="w-full h-full object-contain mix-blend-multiply"
                         onError={(e) => {
-                          // Fallback if the specific image fails
-                          e.target.src = 'https://via.placeholder.com/150?text=' + currentExercise.targetSign;
+                          e.target.onerror = null;
+                          e.target.src = SIGN_IMAGES.default;
                         }}
                       />
                    </div>
-                   <h3 className="text-2xl font-black text-[#1cb0f6] mb-1">Letter {currentExercise.targetSign}</h3>
+                   <h3 className="text-2xl font-black text-[#1cb0f6] mb-1">
+                     {formatSignTitle(currentExercise.targetSign)}
+                   </h3>
                    <p className="text-sm font-bold text-gray-500 leading-tight">
                      {SIGN_DESCRIPTIONS[currentExercise.targetSign] || "Form the sign as shown above."}
                    </p>
@@ -229,6 +269,17 @@ function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
                     {feedback.isCorrect ? 'Brilliant!' : 'Not quite...'}
                   </h3>
                   <p className="font-bold text-lg opacity-90">{feedback.message}</p>
+                  {feedback.prediction != null && (
+                    <p className="text-sm font-bold opacity-75 mt-2">
+                      Predicted: {feedback.prediction} ({Math.round((feedback.confidence || 0) * 100)}%)
+                      {feedback.targetConfidence != null && (
+                        <>
+                          {" · "}
+                          Target {feedback.targetSign}: {Math.round(feedback.targetConfidence * 100)}%
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

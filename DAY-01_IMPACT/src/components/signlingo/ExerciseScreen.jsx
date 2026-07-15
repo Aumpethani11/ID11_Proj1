@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ExerciseType, Difficulty } from '../constants';
-import { verifySign } from '../services/geminiService';
+import { verifySign } from '../../services/signModelService';
+import { SIGN_IMAGES, getSignImage } from '../../constants/signImages';
 
 // Dictionary for descriptions in the practice screen
 const SIGN_DESCRIPTIONS = {
@@ -28,8 +29,7 @@ const SIGN_DESCRIPTIONS = {
   "V": "Index and middle up and spread.",
   "W": "Three middle fingers spread up.",
   "X": "Hooked index finger.",
-  "Y": "Pinky and thumb out.",
-  "Z": "Index draws a Z in the air."
+  "Y": "Pinky and thumb out."
 };
 
 function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
@@ -181,17 +181,16 @@ function ExerciseScreen({ lesson, onFinish, onQuit, difficulty }) {
 
             {/* Reference Guide Panel */}
             {showHint && currentExercise.targetSign && (
-              <div className="w-full max-w-[300px] bg-white border-2 border-gray-200 rounded-[2rem] p-6 shadow-xl relative animate-in slide-in-from-right duration-300">
+              <div className="w-full max-w-[360px] bg-white border-2 border-gray-200 rounded-[2rem] p-6 shadow-xl relative animate-in slide-in-from-right duration-300">
                 <div className="flex flex-col items-center text-center">
-                   <div className="w-24 h-24 sm:w-32 sm:h-32 bg-[#ddf4ff] rounded-2xl mb-4 flex items-center justify-center overflow-hidden border-2 border-[#1cb0f6]/20">
-                      {/* Image Source for ASL finger spelling */}
+                   <div className="w-44 h-44 sm:w-56 sm:h-56 bg-[#ddf4ff] rounded-2xl mb-4 flex items-center justify-center overflow-hidden border-2 border-[#1cb0f6]/20">
                       <img 
-                        src={`https://www.lifeprint.com/asl101/fingerspelling/abc-gifs/${currentExercise.targetSign.toLowerCase()}.gif`}
+                        src={getSignImage(currentExercise.targetSign)}
                         alt={`ASL Sign for ${currentExercise.targetSign}`}
                         className="w-full h-full object-contain mix-blend-multiply"
                         onError={(e) => {
-                          // Fallback if the specific image fails
-                          e.target.src = 'https://via.placeholder.com/150?text=' + currentExercise.targetSign;
+                          e.target.onerror = null;
+                          e.target.src = SIGN_IMAGES.default;
                         }}
                       />
                    </div>

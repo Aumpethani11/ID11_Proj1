@@ -1,120 +1,196 @@
 import React from 'react';
-import { UNITS, ExerciseType } from '../constants';
+import {
+  UNITS,
+  ExerciseType,
+  Difficulty,
+  DIFFICULTY_LABELS,
+  SIGN_LIBRARY,
+  TOTAL_LESSON_COUNT,
+  getSignsByDifficulty,
+  formatSignPromptLabel,
+} from './constants';
 
 function PracticeTab({ stats, onStartPractice }) {
-  const allExercises = UNITS.flatMap(u => u.lessons.flatMap(l => l.exercises));
-  const allSigns = [...new Set(allExercises.filter(e => e.targetSign).map(e => e.targetSign))];
+  const allSigns = SIGN_LIBRARY.map((item) => item.sign);
+
+  const buildLesson = (id, title, signs, mixMultipleChoice = false) => {
+    const exercises = signs.map((sign, i) => {
+      if (mixMultipleChoice && i % 2 === 1) {
+        const distractors = allSigns
+          .filter((s) => s !== sign)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2);
+        return {
+          id: `${id}-${i}`,
+          type: ExerciseType.MULTIPLE_CHOICE,
+          question: `Which sign is ${sign}?`,
+          options: [sign, ...distractors].sort(() => 0.5 - Math.random()),
+          correctOption: sign,
+          targetSign: sign,
+        };
+      }
+
+      return {
+        id: `${id}-${i}`,
+        type: ExerciseType.SIGN_PRACTICE,
+        question: `Show me the ${formatSignPromptLabel(sign)}`,
+        targetSign: sign,
+      };
+    });
+
+    onStartPractice({ id, title, exercises });
+  };
+
+  const generateDifficultyDrill = (difficulty) => {
+    const pool = getSignsByDifficulty(difficulty);
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, Math.min(8, shuffled.length));
+    buildLesson(
+      `practice-${difficulty.toLowerCase()}`,
+      `${DIFFICULTY_LABELS[difficulty]} Drill`,
+      selected,
+      true
+    );
+  };
 
   const generateAlphabetBlitz = () => {
-    // Select 10 random letters from A-Z
-    const shuffled = [...allSigns].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 10);
-    
-    const exercises = selected.map((sign, i) => ({
-      id: `practice-blitz-${i}`,
-      type: i % 2 === 0 ? ExerciseType.SIGN_PRACTICE : ExerciseType.MULTIPLE_CHOICE,
-      question: i % 2 === 0 ? `Show me the letter '${sign}'` : `Which letter is this?`,
-      targetSign: sign,
-      options: [sign, allSigns[Math.floor(Math.random() * allSigns.length)], allSigns[Math.floor(Math.random() * allSigns.length)]].sort(() => 0.5 - Math.random()),
-      correctOption: sign
-    }));
+    const letters = SIGN_LIBRARY.filter((s) => s.category === 'letter').map(
+      (s) => s.sign
+    );
+    const shuffled = [...letters].sort(() => 0.5 - Math.random());
+    buildLesson('practice-blitz', 'Alphabet Blitz', shuffled.slice(0, 10), true);
+  };
 
-    onStartPractice({
-      id: 'practice-blitz',
-      title: 'Alphabet Blitz',
-      exercises
-    });
+  const generateNumberBlitz = () => {
+    const numbers = SIGN_LIBRARY.filter((s) => s.category === 'number').map(
+      (s) => s.sign
+    );
+    const shuffled = [...numbers].sort(() => 0.5 - Math.random());
+    buildLesson('practice-numbers', 'Number Blitz', shuffled, false);
+  };
+
+  const generateWordBlitz = () => {
+    const words = SIGN_LIBRARY.filter((s) => s.category === 'word').map(
+      (s) => s.sign
+    );
+    const shuffled = [...words].sort(() => 0.5 - Math.random());
+    buildLesson('practice-words', 'Word Blitz', shuffled, false);
   };
 
   const generateSpeedDrill = () => {
-    // 5 rapid-fire sign practices
     const shuffled = [...allSigns].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 5);
-    
-    const exercises = selected.map((sign, i) => ({
-      id: `practice-speed-${i}`,
-      type: ExerciseType.SIGN_PRACTICE,
-      question: `Sign '${sign}' as fast as you can!`,
-      targetSign: sign
-    }));
-
-    onStartPractice({
-      id: 'practice-speed',
-      title: 'Speed Drill',
-      exercises
-    });
+    buildLesson('practice-speed', 'Speed Drill', shuffled.slice(0, 5), false);
   };
 
   const generatePersonalizedReview = () => {
-    // Only letters from completed units
-    const completedUnitLetters = UNITS
-      .filter(u => u.lessons.some(l => stats.completedLessons.includes(l.id)))
-      .flatMap(u => u.lessons.flatMap(l => l.exercises.filter(e => e.targetSign).map(e => e.targetSign)));
-    
-    const pool = completedUnitLetters.length > 0 ? completedUnitLetters : allSigns.slice(0, 5);
-    const shuffled = [...new Set(pool)].sort(() => 0.5 - Math.random()).slice(0, 8);
+    const completedUnitSigns = UNITS.filter((u) =>
+      u.lessons.some((l) => stats.completedLessons.includes(l.id))
+    ).flatMap((u) =>
+      u.lessons.flatMap((l) =>
+        l.exercises.filter((e) => e.targetSign).map((e) => e.targetSign)
+      )
+    );
 
-    const exercises = shuffled.map((sign, i) => ({
-      id: `practice-review-${i}`,
-      type: ExerciseType.SIGN_PRACTICE,
-      question: `Let's review the letter '${sign}'`,
-      targetSign: sign
-    }));
-
-    onStartPractice({
-      id: 'practice-review',
-      title: 'Mastery Review',
-      exercises
-    });
+    const pool =
+      completedUnitSigns.length > 0
+        ? [...new Set(completedUnitSigns)]
+        : allSigns.slice(0, 8);
+    const shuffled = [...pool].sort(() => 0.5 - Math.random()).slice(0, 8);
+    buildLesson('practice-review', 'Mastery Review', shuffled, false);
   };
 
   const practiceModes = [
     {
-      title: "Mastery Review",
-      description: "Focus on signs from your completed lessons.",
-      icon: "fa-bullseye",
-      color: "bg-[#58cc02]",
-      borderColor: "border-[#46a302]",
-      onClick: generatePersonalizedReview
+      title: 'Mastery Review',
+      description: 'Focus on signs from your completed lessons.',
+      icon: 'fa-bullseye',
+      color: 'bg-[#58cc02]',
+      onClick: generatePersonalizedReview,
     },
     {
-      title: "Alphabet Blitz",
-      description: "10 random letters to test your general knowledge.",
-      icon: "fa-bolt",
-      color: "bg-[#1cb0f6]",
-      borderColor: "border-[#1899d6]",
-      onClick: generateAlphabetBlitz
+      title: 'Easy Drill',
+      description: 'Open shapes + numbers 0, 1, 2, 5.',
+      icon: 'fa-seedling',
+      color: 'bg-[#7ac70c]',
+      onClick: () => generateDifficultyDrill(Difficulty.EASY),
     },
     {
-      title: "Speed Drill",
-      description: "A fast-paced camera session. No multiple choice!",
-      icon: "fa-fire",
-      color: "bg-[#ff4b4b]",
-      borderColor: "border-[#d33131]",
-      onClick: generateSpeedDrill
-    }
+      title: 'Intermediate Drill',
+      description: 'Mid alphabet + numbers 3, 4, 6.',
+      icon: 'fa-layer-group',
+      color: 'bg-[#1cb0f6]',
+      onClick: () => generateDifficultyDrill(Difficulty.INTERMEDIATE),
+    },
+    {
+      title: 'Hard Drill',
+      description: 'Look-alikes, precision letters + 7–9.',
+      icon: 'fa-fire',
+      color: 'bg-[#ff4b4b]',
+      onClick: () => generateDifficultyDrill(Difficulty.HARD),
+    },
+    {
+      title: 'Alphabet Blitz',
+      description: '10 random letters from A–Y.',
+      icon: 'fa-bolt',
+      color: 'bg-[#ff9600]',
+      onClick: generateAlphabetBlitz,
+    },
+    {
+      title: 'Number Blitz',
+      description: 'Practice all numbers 0–9.',
+      icon: 'fa-hashtag',
+      color: 'bg-[#ce82ff]',
+      onClick: generateNumberBlitz,
+    },
+    {
+      title: 'Word Blitz',
+      description: 'All vocabulary signs: Hello, Bye, Thank You, and more.',
+      icon: 'fa-comments',
+      color: 'bg-[#ff86d0]',
+      onClick: generateWordBlitz,
+    },
+    {
+      title: 'Speed Drill',
+      description: 'A fast camera session across numbers, words & letters.',
+      icon: 'fa-gauge-high',
+      color: 'bg-[#d33131]',
+      onClick: generateSpeedDrill,
+    },
   ];
 
+  const masteryPercent = Math.min(
+    100,
+    Math.round((stats.completedLessons.length / TOTAL_LESSON_COUNT) * 100)
+  );
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto pb-32">
       <div className="mb-10 text-center lg:text-left">
-        <h2 className="text-3xl font-black text-[#4b4b4b] uppercase tracking-tight">Practice Hub</h2>
-        <p className="text-gray-500 font-bold">Refine your skills and earn extra XP!</p>
+        <h2 className="text-3xl font-black text-[#4b4b4b] uppercase tracking-tight">
+          Practice Hub
+        </h2>
+        <p className="text-gray-500 font-bold">
+          Drill by difficulty, letters, or numbers — earn extra XP!
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {practiceModes.map((mode, i) => (
+        {practiceModes.map((mode) => (
           <button
-            key={i}
+            key={mode.title}
             onClick={mode.onClick}
             className="group relative flex flex-col items-center p-8 bg-white border-2 border-gray-200 rounded-3xl hover:border-gray-300 transition-all hover:-translate-y-1 active:translate-y-0"
           >
-            <div className={`w-20 h-20 ${mode.color} rounded-2xl flex items-center justify-center text-white text-3xl mb-6 shadow-lg transform group-hover:scale-110 transition-transform`}>
+            <div
+              className={`w-20 h-20 ${mode.color} rounded-2xl flex items-center justify-center text-white text-3xl mb-6 shadow-lg transform group-hover:scale-110 transition-transform`}
+            >
               <i className={`fa-solid ${mode.icon}`}></i>
             </div>
             <h3 className="text-xl font-black text-[#4b4b4b] mb-2">{mode.title}</h3>
-            <p className="text-sm font-bold text-gray-400 text-center px-2">{mode.description}</p>
-            
+            <p className="text-sm font-bold text-gray-400 text-center px-2">
+              {mode.description}
+            </p>
+
             <div className="mt-8 flex items-center gap-2 text-[#ff9600] font-black">
               <i className="fa-solid fa-bolt"></i>
               <span>+15 XP</span>
@@ -123,7 +199,6 @@ function PracticeTab({ stats, onStartPractice }) {
         ))}
       </div>
 
-      {/* Mastery Stats Section */}
       <div className="mt-16 bg-gray-50 rounded-3xl p-8 border-2 border-dashed border-gray-200">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -132,14 +207,16 @@ function PracticeTab({ stats, onStartPractice }) {
             </div>
             <div>
               <h4 className="text-xl font-black text-[#4b4b4b]">Mastery Progress</h4>
-              <p className="text-gray-400 font-bold">You've unlocked {stats.completedLessons.length} lessons</p>
+              <p className="text-gray-400 font-bold">
+                {stats.completedLessons.length} of {TOTAL_LESSON_COUNT} lessons unlocked
+              </p>
             </div>
           </div>
           <div className="w-full sm:w-48 h-4 bg-gray-200 rounded-full overflow-hidden">
-             <div 
-              className="h-full bg-[#1cb0f6] transition-all duration-1000" 
-              style={{ width: `${(stats.completedLessons.length / 10) * 100}%` }}
-             />
+            <div
+              className="h-full bg-[#1cb0f6] transition-all duration-1000"
+              style={{ width: `${masteryPercent}%` }}
+            />
           </div>
         </div>
       </div>

@@ -155,11 +155,17 @@ const SpeechToText = () => {
       };
 
       recognition.onerror = (event) => {
+        // Aborted when stopping/restarting recognition — ignore
+        if (event.error === 'aborted' || event.error === 'no-speech') {
+          if (event.error === 'no-speech') {
+            setError('No speech detected. Please try again.');
+          }
+          setIsListening(false);
+          return;
+        }
+
         console.error('Speech recognition error:', event.error);
-        setError(`Error: ${event.error}`);
-        if (event.error === 'no-speech') {
-          setError('No speech detected. Please try again.');
-        } else if (event.error === 'not-allowed') {
+        if (event.error === 'not-allowed') {
           setError('Microphone access denied. Please allow microphone access.');
         } else {
           setError('Speech recognition error. Please try again.');
@@ -236,6 +242,10 @@ const SpeechToText = () => {
     setTranslationError('');
   };
 
+  // Chrome/browsers fire these when cancel() stops prior speech — not real failures
+  const isBenignSpeechError = (error) =>
+    error === 'interrupted' || error === 'canceled' || error === 'cancelled';
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).then(() => {
       alert('Text copied to clipboard!');
@@ -255,7 +265,7 @@ const SpeechToText = () => {
       return;
     }
 
-    // Stop any ongoing speech
+    // Stop any ongoing speech (triggers "interrupted" on the previous utterance)
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -358,12 +368,18 @@ const SpeechToText = () => {
     
     utterance.onerror = (event) => {
       setIsSpeaking(false);
+      // Expected when stopping previous speech or starting a new one
+      if (isBenignSpeechError(event.error)) {
+        return;
+      }
       console.error('Speech error:', event.error);
       alert(`Speech error: ${event.error}. Please try again.`);
     };
 
-    // Speak the text
-    window.speechSynthesis.speak(utterance);
+    // Brief delay after cancel() — Chrome often fires "interrupted" without this
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   };
 
   const getAvailableVoicesForLanguage = () => {
@@ -535,8 +551,11 @@ const SpeechToText = () => {
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
       setIsSpeaking(false);
+      if (isBenignSpeechError(event.error)) {
+        return;
+      }
+      console.error('Speech synthesis error:', event);
     };
 
     // Add a small delay to ensure everything is ready

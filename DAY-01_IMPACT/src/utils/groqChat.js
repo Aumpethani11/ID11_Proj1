@@ -119,32 +119,7 @@ Provide a concise, helpful, and direct answer. Be friendly and understanding of 
       }
     }
     
-    // If all Groq attempts fail, try Gemini as fallback
-    if (process.env.REACT_APP_GEMINI_API_KEY) {
-      console.log('All Groq attempts failed, trying Gemini as fallback...');
-      try {
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-        
-        const geminiPrompt = `You are an intelligent assistant for a Deaf user. The user input is converted from Sign Language to Text, so it may lack prepositions or have unique grammar.
-
-User's Question: "${inputText}"
-
-Provide a concise, helpful, and direct answer.`;
-        
-        const result = await model.generateContent(geminiPrompt);
-        const responseText = result.response.text()?.trim();
-        
-        if (responseText) {
-          console.log('Gemini fallback response received:', responseText);
-          return responseText;
-        }
-      } catch (geminiError) {
-        console.error('Gemini fallback also failed:', geminiError);
-      }
-    }
-    
+    // If all Groq attempts fail, return a helpful offline-friendly message
     // Handle specific errors
     if (error.message.includes('quota') || error.message.includes('rate limit')) {
       return "API quota exceeded. Please try again later or upgrade your plan. Groq has generous free tier limits.";
