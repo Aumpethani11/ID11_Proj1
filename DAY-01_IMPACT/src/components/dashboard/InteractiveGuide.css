@@ -1,0 +1,549 @@
+.interactive-guide {
+  padding: 2rem;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  border-radius: 20px;
+  margin: 1rem 0;
+}
+
+.guide-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.guide-header h2 {
+  color: var(--color-subtext);
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.guide-header p {
+  color: var(--color-text);
+  font-size: 16px;
+  margin: 0;
+}
+
+.user-level {
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+/* Progress Section */
+.progress-section {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Step Content */
+.step-content {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.step-header h3 {
+  color: var(--color-subtext);
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+.step-header p {
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+}
+
+.step-tasks {
+  margin-bottom: 2rem;
+}
+
+.step-tasks h4 {
+  color: var(--color-subtext);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.step-tasks ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.step-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.step-tasks li:hover {
+  background: rgba(4, 44, 84, 0.8);
+  transform: translateX(5px);
+}
+
+.step-tasks input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-subtext);
+}
+
+.step-tasks label {
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.step-tips {
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.step-tips h4 {
+  color: var(--color-subtext);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.step-tips p {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nav-button, .complete-button {
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.nav-button {
+  background: rgba(4, 44, 84, 0.8);
+  color: var(--color-text);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+}
+
+.nav-button:hover:not(:disabled) {
+  background: rgba(174, 103, 250, 0.1);
+  border-color: rgba(174, 103, 250, 0.5);
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.complete-button {
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(174, 103, 250, 0.4);
+}
+
+.complete-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(174, 103, 250, 0.6);
+}
+
+/* Recommendations Section */
+.recommendations-section {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.recommendations-section h3 {
+  color: var(--color-subtext);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.recommendation-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(174, 103, 250, 0.2);
+}
+
+.recommendation-icon {
+  font-size: 1.2rem;
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.recommendation-text {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Challenges Section */
+.challenges-section {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.challenges-section h3 {
+  color: var(--color-subtext);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+.challenges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.challenge-card {
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.challenge-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(174, 103, 250, 0.2);
+}
+
+.challenge-card h4 {
+  color: var(--color-subtext);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.challenge-card p {
+  color: var(--color-text);
+  font-size: 14px;
+  margin: 0 0 1rem 0;
+}
+
+.challenge-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-bar-small {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill-small {
+  height: 100%;
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.challenge-progress span {
+  color: var(--color-text);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Quiz Section */
+.quiz-section {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.quiz-section h3 {
+  color: var(--color-subtext);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.quiz-toggle {
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(174, 103, 250, 0.4);
+  display: block;
+  margin: 0 auto;
+}
+
+.quiz-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(174, 103, 250, 0.6);
+}
+
+.quiz-content {
+  margin-top: 1.5rem;
+}
+
+.quiz-question {
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.quiz-question h4 {
+  color: var(--color-subtext);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quiz-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.quiz-options label:hover {
+  background: rgba(174, 103, 250, 0.1);
+}
+
+.submit-quiz {
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(174, 103, 250, 0.4);
+  margin-top: 1rem;
+}
+
+.submit-quiz:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(174, 103, 250, 0.6);
+}
+
+/* Next Steps Section */
+.next-steps-section {
+  background: rgba(4, 12, 24, 0.9);
+  border: 1px solid rgba(174, 103, 250, 0.2);
+  border-radius: 15px;
+  padding: 2rem;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.next-steps-section h3 {
+  color: var(--color-subtext);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+.next-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.next-step-card {
+  background: rgba(4, 44, 84, 0.6);
+  border: 1px solid rgba(174, 103, 250, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.next-step-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(174, 103, 250, 0.2);
+}
+
+.next-step-card h4 {
+  color: var(--color-subtext);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.next-step-card p {
+  color: var(--color-text);
+  font-size: 14px;
+  margin: 0 0 1rem 0;
+}
+
+.action-button {
+  background: linear-gradient(135deg, #ae67fa 0%, #f49867 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(174, 103, 250, 0.4);
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(174, 103, 250, 0.6);
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .interactive-guide {
+    padding: 1rem;
+  }
+  
+  .step-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .nav-button, .complete-button {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .challenges-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .next-steps-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .quiz-options {
+    gap: 0.5rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .guide-header h2 {
+    font-size: 24px;
+  }
+  
+  .step-header h3 {
+    font-size: 20px;
+  }
+  
+  .challenge-card, .next-step-card {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,351 @@
+
+:root {
+  --color-bg: #0b132b;
+  --color-surface: rgba(255, 255, 255, 0.08);
+  --color-text: #ffffff;
+  --color-subtext: #8fd3d8;
+  --color-accent: #00bfa6;
+  --color-border: rgba(255, 255, 255, 0.2);
+  --gradient-text: linear-gradient(135deg, #00bfa6, #0077b6);
+  --font-primary: 'Poppins', 'Inter', sans-serif;
+}
+
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+
+.resources-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+
+.resources-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.resources-header h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.resources-header p {
+  font-size: 1.2rem;
+  color: #cfd8dc;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+
+.resources-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-3px);
+}
+
+.tab-btn.active {
+  background: var(--gradient-text);
+  border-color: transparent;
+  box-shadow: 0 4px 20px rgba(0, 191, 166, 0.4);
+}
+
+
+.resources-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.resources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+
+.resource-card {
+  background: var(--color-surface);
+  border-radius: 20px;
+  padding: 1.5rem;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.resource-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 30px rgba(0, 191, 166, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.video-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.video-thumbnail {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.video-thumbnail img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.video-card:hover .video-overlay {
+  opacity: 1;
+}
+
+.play-icon {
+  font-size: 3rem;
+  color: #ffffff;
+}
+
+.video-duration,
+.video-category {
+  position: absolute;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+}
+
+.video-duration {
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.video-category {
+  top: 10px;
+  left: 10px;
+  background: var(--gradient-text);
+  color: #fff;
+}
+
+/* 📄 Material, 🔗 Link, 🧠 Exercise Cards */
+.material-card,
+.link-card,
+.exercise-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.material-icon,
+.link-icon,
+.exercise-icon {
+  font-size: 2.5rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.material-meta,
+.exercise-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.material-type,
+.material-category,
+.material-size,
+.exercise-difficulty,
+.exercise-time {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  color: #e0f7fa;
+}
+
+/* 📘 Exercise Details */
+.exercise-details {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.exercise-details h4 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.exercise-details li {
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem 0 0.25rem 1rem;
+  list-style: none;
+  position: relative;
+}
+
+.exercise-details li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+/* 📚 Resource Buttons */
+.resource-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--gradient-text);
+  color: white;
+  text-decoration: none;
+  border-radius: 25px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.resource-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 191, 166, 0.4);
+}
+
+/* 🔠 Alphabet Section */
+.alphabet-guide {
+  text-align: center;
+  padding: 2rem;
+  background: #0d1b2a;
+  border-radius: 15px;
+}
+
+.alphabet-guide h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.alphabet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+  justify-items: center;
+}
+
+.alphabet-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  width: 120px;
+}
+
+.alphabet-item:hover {
+  transform: translateY(-5px) scale(1.05);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+
+.resources-footer {
+  max-width: 800px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+}
+
+.learning-tips h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.learning-tips li {
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  position: relative;
+  list-style: none;
+}
+
+.learning-tips li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .resources-header h1 {
+    font-size: 2rem;
+  }
+  .resources-grid {
+    grid-template-columns: 1fr;
+  }
+  .tab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
