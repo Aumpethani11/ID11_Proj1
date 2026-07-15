@@ -1,1 +1,0 @@
-# VnedorBridge-Odoo-Team-Aum
