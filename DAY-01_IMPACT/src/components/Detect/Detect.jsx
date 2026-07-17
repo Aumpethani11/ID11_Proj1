@@ -19,7 +19,6 @@ import { checkApiKeys } from "../../config/apiKeys";
 import {
   findSignByName,
   formatSentenceForDisplay,
-  formatSentenceForSpeech,
 } from "../../utils/signLookup";
 
 let startTime = "";
@@ -57,7 +56,20 @@ const flattenHandLandmarks = (landmarks) => {
   return coords.flat();
 };
 
-const Detect = () => {
+/**
+ * Optional props keep Detect compatible with /detect while enabling chat:
+ * - onSentenceReady: fired when a completed sign sentence is saved
+ * - onGestureDetected: fired on each new predicted sign label
+ * - requireAuth: when false, skips the login gate (used by SignUser chat)
+ * - embedded: reserved for layout wrappers (SignInput)
+ */
+const Detect = ({
+  onSentenceReady,
+  onGestureDetected,
+  onSentenceBuilding,
+  requireAuth = true,
+  embedded = false,
+}) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const requestRef = useRef();
@@ -65,6 +77,9 @@ const Detect = () => {
   const classifierRef = useRef(null);
   const webcamRunningRef = useRef(false);
   const lastPredictedSignRef = useRef("");
+  const onSentenceReadyRef = useRef(onSentenceReady);
+  const onGestureDetectedRef = useRef(onGestureDetected);
+  const onSentenceBuildingRef = useRef(onSentenceBuilding);
 
   const [webcamRunning, setWebcamRunning] = useState(false);
   const [gestureOutput, setGestureOutput] = useState("");
@@ -73,13 +88,12 @@ const Detect = () => {
   const [detectedData, setDetectedData] = useState([]);
   const user = useSelector((state) => state.auth?.user);
   const { accessToken } = useSelector((state) => state.auth);
+  const canUseDetect = !requireAuth || Boolean(accessToken);
   const dispatch = useDispatch();
   const [currentImage, setCurrentImage] = useState(null);
 
-  const [selectedVoice, setSelectedVoice] = useState(null);
   const [rate, setRate] = useState(1);
   const [pitch, setPitch] = useState(1);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   
   // New states for sentence building
   const [currentSentence, setCurrentSentence] = useState("");
@@ -87,6 +101,8 @@ const Detect = () => {
   const [isBuildingSentence, setIsBuildingSentence] = useState(false);
   const gestureTimeoutRef = useRef(null);
   const currentSentenceRef = useRef("");
+  const speechDraftRef = useRef("");
+  const embeddedRef = useRef(embedded);
 
   // AI Chat states
   const [aiResponse, setAiResponse] = useState("");
@@ -103,39 +119,39 @@ const Detect = () => {
   const [textToSignPayload, setTextToSignPayload] = useState({ text: "", key: 0 });
 
   useEffect(() => {
-    currentSentenceRef.current = currentSentence;
-  }, [currentSentence]);
+    onSentenceReadyRef.current = onSentenceReady;
+  }, [onSentenceReady]);
 
-  // Load voices when the component mounts
   useEffect(() => {
-    const loadVoices = () => {
-      const synthVoices = window.speechSynthesis.getVoices();
-      if (synthVoices.length === 0) return;
+    onGestureDetectedRef.current = onGestureDetected;
+  }, [onGestureDetected]);
 
-      const preferred =
-        synthVoices.find((voice) => voice.lang === selectedLanguage) ||
-        synthVoices.find((voice) =>
-          voice.lang.startsWith(selectedLanguage.split("-")[0])
-        ) ||
-        synthVoices[0];
+  useEffect(() => {
+    onSentenceBuildingRef.current = onSentenceBuilding;
+  }, [onSentenceBuilding]);
 
-      setSelectedVoice(preferred);
-    };
+  useEffect(() => {
+    embeddedRef.current = embedded;
+  }, [embedded]);
 
-    loadVoices();
-    
-    // Check all API keys status
+  useEffect(() => {
+    currentSentenceRef.current = currentSentence;
+    const liveSpeech = `${transcript} ${interimTranscript}`.replace(/\s+/g, " ").trim();
+    speechDraftRef.current = liveSpeech;
+
+    const forming = embedded
+      ? [currentSentence, liveSpeech].filter((part) => part && part.trim()).join(" ").trim()
+      : currentSentence;
+
+    if (typeof onSentenceBuildingRef.current === "function") {
+      onSentenceBuildingRef.current(forming);
+    }
+  }, [currentSentence, transcript, interimTranscript, embedded]);
+
+  // API checks on mount / language change
+  useEffect(() => {
     checkApiKeys();
-    
-    // Test Groq API connection
     testGroqConnection();
-    
-    // Voices load asynchronously, so we need to listen for the onvoiceschanged event
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-    };
   }, [selectedLanguage]);
 
   // Handle canvas resizing when webcam dimensions change
@@ -277,23 +293,7 @@ const Detect = () => {
     });
   }, []);
 
-  // Function to speak the current sentence
-  const speakSentence = useCallback((text) => {
-    if (!text || text.trim() === "") return;
-
-    const speechText = formatSentenceForSpeech(text);
-    const utterance = new SpeechSynthesisUtterance(speechText);
-    utterance.voice = selectedVoice;
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    
-    window.speechSynthesis.cancel(); // Stop any previous speech
-    window.speechSynthesis.speak(utterance);
-  }, [selectedVoice, rate, pitch]);
-
-  // Function to clear current sentence
+  // Sign detection stays silent — no TTS for detected signs/sentences
   const clearSentence = useCallback(() => {
     setCurrentSentence("");
     setIsBuildingSentence(false);
@@ -301,8 +301,13 @@ const Detect = () => {
 
   // Function to save sentence to history
   const saveSentenceToHistory = useCallback(() => {
-    const sentence = currentSentenceRef.current;
-    if (sentence.trim() !== "") {
+    const speechPart = embeddedRef.current
+      ? String(speechDraftRef.current || "").trim()
+      : "";
+    const base = currentSentenceRef.current.trim();
+    const sentence = [base, speechPart].filter(Boolean).join(" ").trim();
+
+    if (sentence !== "") {
       const newHistoryItem = {
         id: Date.now(),
         sentence,
@@ -314,15 +319,20 @@ const Detect = () => {
         localStorage.setItem('signLanguageSentenceHistory', JSON.stringify(updatedHistory));
         return updatedHistory;
       });
+
+      if (typeof onSentenceReadyRef.current === "function") {
+        onSentenceReadyRef.current(sentence);
+      }
+
+      if (embeddedRef.current) {
+        setTranscript("");
+        setInterimTranscript("");
+        speechDraftRef.current = "";
+      }
       
       clearSentence();
     }
   }, [clearSentence]);
-
-  // Function to speak sentence from history
-  const speakFromHistory = (sentence) => {
-    speakSentence(sentence);
-  };
 
   // Function to clear all sentence history
   const clearAllHistory = () => {
@@ -368,6 +378,11 @@ const Detect = () => {
   // Auto-build sentence whenever gestureOutput changes
   useEffect(() => {
     if (gestureOutput && gestureOutput.trim() !== "" && gestureOutput !== "none") {
+      // Keep detection silent — cancel any leftover browser TTS
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
       addWordToSentence(gestureOutput);
       setIsBuildingSentence(true);
 
@@ -392,32 +407,28 @@ const Detect = () => {
     };
   }, [gestureOutput, addWordToSentence, saveSentenceToHistory]);
 
-  // Manual control for speaking/stopping
-  const handleSpeak = () => {
-    if (!currentSentence || currentSentence.trim() === "") return;
-    
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    } else {
-      speakSentence(currentSentence);
-    }
-  };
-
-  // Function to manually complete sentence with delay to ensure last gesture is captured
+  // Complete / send the shared forming sentence (signs + speech)
   const manualCompleteSentence = () => {
-    if (currentSentence && currentSentence.trim() !== "") {
-      setTimeout(() => {
-        saveSentenceToHistory();
-      }, 800);
-    }
-  };
+    const speechPart = String(speechDraftRef.current || "").trim();
+    const base = String(currentSentenceRef.current || currentSentence || "").trim();
+    const combined = [base, speechPart].filter(Boolean).join(" ").trim();
 
-  // Function to speak individual gesture
-  const speakGesture = () => {
-    if (gestureOutput && gestureOutput.trim() !== "") {
-      speakSentence(gestureOutput);
+    if (!combined) return;
+
+    // Keep refs in sync so saveSentenceToHistory picks up the full text
+    if (base) {
+      currentSentenceRef.current = base;
     }
+
+    if (embedded) {
+      saveSentenceToHistory();
+      return;
+    }
+
+    // Full Detect page: short delay so the last gesture can settle
+    setTimeout(() => {
+      saveSentenceToHistory();
+    }, 800);
   };
 
   // ------------------- AI Chat Functions -------------------
@@ -437,9 +448,6 @@ const Detect = () => {
       const response = await getGroqResponse(currentSentence);
       console.log('Groq AI Response:', response);
       setAiResponse(response);
-      
-      // Optional: Make the system Speak the AI answer (Text-to-Speech)
-      speakSentence(response);
     } catch (error) {
       console.error("Groq AI Chat Error:", error);
       setAiResponse("Sorry, I couldn't connect to the AI server.");
@@ -683,6 +691,10 @@ const Detect = () => {
         ]);
 
         setGestureOutput(predictedSign);
+
+        if (typeof onGestureDetectedRef.current === "function") {
+          onGestureDetectedRef.current(predictedSign);
+        }
       }
     } else {
       resetDetectionOutput();
@@ -709,6 +721,11 @@ const Detect = () => {
       cancelAnimationFrame(requestRef.current);
       clearCanvas();
       resetDetectionOutput();
+
+      // Stop any TTS when detection stops — do not speak the completed sentence
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
 
       if (isBuildingSentence && currentSentence.trim() !== "") {
         saveSentenceToHistory();
@@ -829,48 +846,120 @@ const Detect = () => {
     };
   }, []);
 
+  const formingBannerText = embedded
+    ? [currentSentence, transcript, interimTranscript]
+        .filter((part) => part && String(part).trim())
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim()
+    : currentSentence;
+
   return (
     <>
-      <div className="signlang_detection-container">
-        <div className="image-glass"></div>
-        {accessToken ? (
+      <div
+        className={`signlang_detection-container${
+          embedded ? " signlang_detection-container--embedded" : ""
+        }`}
+      >
+        {!embedded && <div className="image-glass"></div>}
+        {canUseDetect ? (
           <>
-            {/* Main Layout Container - Four Equal Sections */}
-            <div className="detect-main-layout">
+            <div
+              className={`detect-main-layout${
+                embedded ? " detect-main-layout--embedded detect-main-layout--chat" : ""
+              }`}
+            >
+              {embedded && (
+                <div className="incoming-banner forming-banner-shared">
+                  <h4>Forming sentence</h4>
+                  <p>
+                    {formingBannerText
+                      ? formatSentenceForDisplay(formingBannerText)
+                      : "Sign or speak — your sentence appears here…"}
+                  </p>
+                  <div className="forming-banner-actions">
+                    <button
+                      type="button"
+                      className="complete-sentence-btn"
+                      onClick={manualCompleteSentence}
+                      disabled={!formingBannerText}
+                    >
+                      Send Sentence
+                    </button>
+                    <button
+                      type="button"
+                      className="clear-sentence-btn"
+                      onClick={() => {
+                        clearSentence();
+                        clearTranscript();
+                        speechDraftRef.current = "";
+                      }}
+                      disabled={!formingBannerText}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Section 1: Live Hand Gesture Detection */}
               <div className="detect-section gesture-detection-section">
-                <h2 className="section-title">Live Hand Gesture Detection</h2>
-              <div className="signlang_webcam">
-                <Webcam
-                  audio={false}
-                  ref={webcamRef}
-                  style={{ 
-                    width: "100%", 
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block"
-                  }}
-                />
-                <canvas ref={canvasRef} className="signlang_canvas" />
-              </div>
-                
+                <h2 className="section-title">
+                  {embedded ? "Sign Detection" : "Live Hand Gesture Detection"}
+                </h2>
+                <div className="signlang_webcam">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                  <canvas ref={canvasRef} className="signlang_canvas" />
+                </div>
+
                 <div className="webcam-controls">
-                  <button onClick={enableCam} disabled={isLoading} className="webcam-toggle-btn">
-                    {isLoading ? "Loading..." : webcamRunning ? "Stop Detection" : "Start Detection"}
-                </button>
+                  <button
+                    onClick={enableCam}
+                    disabled={isLoading}
+                    className="webcam-toggle-btn"
+                  >
+                    {isLoading
+                      ? "Loading..."
+                      : webcamRunning
+                        ? "Stop Detection"
+                        : "Start Detection"}
+                  </button>
                   <div className="gesture-display">
                     <div className="current-gesture">
                       <span className="gesture-label">Current Gesture:</span>
-                      <span className="gesture_output">{gestureOutput || "No gesture detected"}</span>
-                      <button
-                        onClick={speakGesture}
-                        disabled={!gestureOutput || gestureOutput.trim() === ""}
-                        className="speak-gesture-btn"
-                        title="Speak gesture"
-                      >
-                        🔊
-                      </button>
+                      <span className="gesture_output">
+                        {gestureOutput || "No gesture detected"}
+                      </span>
                     </div>
+
+                    {!embedded && (
+                      <div className="forming-sentence-live">
+                        <span className="forming-sentence-live__label">
+                          {isBuildingSentence
+                            ? "Forming sentence…"
+                            : "Sentence builder"}
+                        </span>
+                        <p
+                          className={`forming-sentence-live__text ${
+                            currentSentence ? "has-text" : ""
+                          }`}
+                        >
+                          {currentSentence
+                            ? formatSentenceForDisplay(currentSentence)
+                            : "Signs will appear here as you build a sentence…"}
+                        </p>
+                      </div>
+                    )}
+
                     {currentImage && (
                       <div className="detected-sign-preview">
                         <img
@@ -880,19 +969,18 @@ const Detect = () => {
                         <span>{currentImage.name}</span>
                       </div>
                     )}
-                  {progress ? <ProgressBar progress={progress} /> : null}
+                    {progress ? <ProgressBar progress={progress} /> : null}
+                  </div>
                 </div>
               </div>
-            </div>
 
               {/* Section 2: Speech-to-Text */}
               <div className="detect-section speech-to-text-section">
                 <h3 className="section-subtitle">Speech-to-Text</h3>
-                
-                {/* Language Selection */}
+
                 <div className="language-selector">
                   <label htmlFor="language-select">Select Language:</label>
-                  <select 
+                  <select
                     id="language-select"
                     value={selectedLanguage}
                     onChange={(e) => handleLanguageChange(e.target.value)}
@@ -903,235 +991,280 @@ const Detect = () => {
                     <option value="hi-IN">हिंदी (Hindi)</option>
                   </select>
                 </div>
-                
+
                 <div className="stt-controls">
-                  <button 
+                  <button
                     onClick={isListening ? stopListening : startListening}
-                    className={`mic-button ${isListening ? 'listening' : ''}`}
+                    className={`mic-button ${isListening ? "listening" : ""}`}
                     disabled={!speechRecognition}
                   >
-                    {isListening ? '🛑 Stop Listening' : '🎤 Start Listening'}
+                    {isListening ? "🛑 Stop Listening" : "🎤 Start Listening"}
                   </button>
-                  
+
                   {!speechRecognition && (
                     <p className="stt-error">
-                      Speech recognition not supported in this browser. Please use Chrome, Edge, or Safari.
+                      Speech recognition not supported in this browser. Please
+                      use Chrome, Edge, or Safari.
                     </p>
                   )}
 
                   {micPermission === false && (
                     <p className="stt-error">
-                      Microphone access denied. Please allow microphone permission and try again.
+                      Microphone access denied. Please allow microphone
+                      permission and try again.
                     </p>
                   )}
                 </div>
 
-                {(transcript || interimTranscript) && (
+                {!embedded && (transcript || interimTranscript) && (
                   <div className="transcript-display">
                     <h4>Live Transcript:</h4>
                     <div className="transcript-text">
                       {transcript}
                       {interimTranscript && (
-                        <span className="interim-transcript"> {interimTranscript}</span>
+                        <span className="interim-transcript">
+                          {" "}
+                          {interimTranscript}
+                        </span>
                       )}
                     </div>
                     <div className="transcript-actions">
-                      <button onClick={saveSpeechToHistory} className="save-transcript-btn">
+                      <button
+                        onClick={saveSpeechToHistory}
+                        className="save-transcript-btn"
+                      >
                         Save to History
                       </button>
-                      <button onClick={() => sendToTextToSign(transcript)} className="convert-to-sign-btn">
+                      <button
+                        onClick={() => sendToTextToSign(transcript)}
+                        className="convert-to-sign-btn"
+                      >
                         Convert to Signs
                       </button>
-                      <button onClick={clearTranscript} className="clear-transcript-btn">
+                      <button
+                        onClick={clearTranscript}
+                        className="clear-transcript-btn"
+                      >
                         Clear
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Speech History */}
-                <div className="speech-history">
-                  <div className="speech-history-header">
-                    <h4>Speech History:</h4>
-                    <div className="speech-history-buttons">
-                      <button onClick={clearAllSpeechHistory} className="clear-speech-btn">
-                        Clear All
-                      </button>
-                      <button onClick={exportSpeechHistory} className="export-speech-btn">
-                        Export
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {speechHistory.length > 0 ? (
-                    <div className="speech-history-list">
-                      {speechHistory.map((item) => (
-                        <div key={item.id} className="speech-history-item">
-                          <span className="speech-timestamp">{item.timestamp}</span>
-                          <span className="speech-text">{item.text}</span>
-                          <button
-                            onClick={() => sendToTextToSign(item.text)}
-                            className="convert-to-sign-btn small"
-                            title="Convert to signs"
-                          >
-                            🤟
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="no-speech">No speech recorded yet. Start speaking to see your transcripts here!</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Section 3: Sentence Builder */}
-              <div className="detect-section sentence-builder-section">
-                <h3 className="section-subtitle">Sentence Builder</h3>
-                
-                {/* Current Sentence Display */}
-                <div className="current-sentence-display">
-                  <h4>Current Sentence:</h4>
-                  <div className="sentence-text">
-                    {currentSentence
-                      ? formatSentenceForDisplay(currentSentence)
-                      : "Start making gestures to build your sentence..."}
-                  </div>
-                  <div className="sentence-actions">
-                    <button 
-                      onClick={handleSpeak} 
-                      disabled={!currentSentence || currentSentence.trim() === ""}
-                      className="speak-sentence-btn"
-                    >
-                      {isSpeaking ? '🔇 Stop Speaking' : '🔊 Speak Sentence'}
-                    </button>
-                    <button
-                      onClick={() => sendToTextToSign(currentSentence)}
-                      disabled={!currentSentence || currentSentence.trim() === ""}
-                      className="convert-to-sign-btn"
-                    >
-                      Convert to Signs
-                    </button>
-                    <button 
-                      onClick={manualCompleteSentence} 
-                      disabled={!currentSentence || currentSentence.trim() === ""}
-                      className="complete-sentence-btn"
-                    >
-                      Complete Sentence
-                    </button>
-                    <button 
-                      onClick={clearSentence} 
-                      disabled={!currentSentence || currentSentence.trim() === ""}
-                      className="clear-sentence-btn"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {/* AI Chat Integration */}
-                <div className="ai-chat-section">
-                  <h4 className="ai-chat-title">🤖 AI Assistant</h4>
-                  <button 
-                    className="ask-ai-btn" 
-                    onClick={handleAskAI}
-                    disabled={isAiProcessing || !currentSentence || currentSentence.trim() === ""}
-                  >
-                    {isAiProcessing ? "🤔 Thinking..." : "🤖 Ask AI About Your Sentence"}
-                  </button>
-                  {!currentSentence || currentSentence.trim() === "" ? (
-                    <p className="ai-chat-hint">Sign a sentence first to ask the AI assistant!</p>
-                  ) : null}
-
-                  {aiResponse && (
-                    <div className="ai-response-bubble">
-                      <h4>🤖 AI Answer:</h4>
-                      <p>{aiResponse}</p>
-                      
-                      {/* BONUS: Feed answer back into Text-to-Sign */}
-                      <button 
-                        onClick={() => sendToTextToSign(aiResponse)}
-                        className="translate-to-sign-btn"
-                      >
-                        🤟 Translate Answer to Sign
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Speech Settings */}
-                <div className="speech-settings">
-                  <h4>Speech Settings:</h4>
-                  <div className="settings-controls">
-                    <label>
-                      Rate: {rate}
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="1.5"
-                        step="0.1"
-                        value={rate}
-                        onChange={(e) => setRate(parseFloat(e.target.value))}
-                      />
-                    </label>
-                    <label>
-                      Pitch: {pitch}
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2"
-                        step="0.1"
-                        value={pitch}
-                        onChange={(e) => setPitch(parseFloat(e.target.value))}
-                      />
-                    </label>
-                </div>
-              </div>
-
-              {/* Sentence History */}
-              <div className="sentence-history">
-                <div className="history-header">
-                    <h4>Sentence History:</h4>
-                  <div className="history-buttons">
-                    <button onClick={clearAllHistory} className="clear-history-btn">
-                        Clear All
-                    </button>
-                    <button onClick={exportSentenceHistory} className="export-history-btn">
-                        Export
-                    </button>
-                  </div>
-                </div>
-                {sentenceHistory.length > 0 ? (
-                  <div className="history-list">
-                    {sentenceHistory.map((item) => (
-                      <div key={item.id} className="history-item">
-                        <span className="timestamp">{item.timestamp}</span>
-                        <span className="sentence">{formatSentenceForDisplay(item.sentence)}</span>
-                        <button onClick={() => speakFromHistory(item.sentence)} className="speak-history-btn">
-                            🔊
+                {!embedded && (
+                  <div className="speech-history">
+                    <div className="speech-history-header">
+                      <h4>Speech History:</h4>
+                      <div className="speech-history-buttons">
+                        <button
+                          onClick={clearAllSpeechHistory}
+                          className="clear-speech-btn"
+                        >
+                          Clear All
                         </button>
                         <button
-                          onClick={() => sendToTextToSign(item.sentence)}
-                          className="convert-to-sign-btn small"
-                          title="Convert to signs"
+                          onClick={exportSpeechHistory}
+                          className="export-speech-btn"
                         >
-                          🤟
+                          Export
                         </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {speechHistory.length > 0 ? (
+                      <div className="speech-history-list">
+                        {speechHistory.map((item) => (
+                          <div key={item.id} className="speech-history-item">
+                            <span className="speech-timestamp">
+                              {item.timestamp}
+                            </span>
+                            <span className="speech-text">{item.text}</span>
+                            <button
+                              onClick={() => sendToTextToSign(item.text)}
+                              className="convert-to-sign-btn small"
+                              title="Convert to signs"
+                            >
+                              🤟
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="no-speech">
+                        No speech recorded yet. Start speaking to see your
+                        transcripts here!
+                      </p>
+                    )}
                   </div>
-                ) : (
-                    <p className="no-sentences">No sentences completed yet. Start building your first sentence!</p>
                 )}
-                </div>
               </div>
 
-              {/* Section 4: Text-to-Sign Converter */}
-              <TextToSign 
-                onSignGenerated={handleSignGenerated}
-                isActive={true}
-                externalPayload={textToSignPayload}
-              />
+              {!embedded && (
+                <>
+                  <div className="detect-section sentence-builder-section">
+                    <h3 className="section-subtitle">Sentence Builder</h3>
+
+                    <div className="current-sentence-display">
+                      <h4>Current Sentence:</h4>
+                      <div
+                        className={`sentence-text ${
+                          currentSentence ? "sentence-text--forming" : ""
+                        }`}
+                      >
+                        {currentSentence
+                          ? formatSentenceForDisplay(currentSentence)
+                          : "Start making gestures to build your sentence..."}
+                      </div>
+                      <div className="sentence-actions">
+                        <button
+                          onClick={() => sendToTextToSign(currentSentence)}
+                          disabled={
+                            !currentSentence || currentSentence.trim() === ""
+                          }
+                          className="convert-to-sign-btn"
+                        >
+                          Convert to Signs
+                        </button>
+                        <button
+                          onClick={manualCompleteSentence}
+                          disabled={
+                            !currentSentence || currentSentence.trim() === ""
+                          }
+                          className="complete-sentence-btn"
+                        >
+                          Complete Sentence
+                        </button>
+                        <button
+                          onClick={clearSentence}
+                          disabled={
+                            !currentSentence || currentSentence.trim() === ""
+                          }
+                          className="clear-sentence-btn"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="ai-chat-section">
+                      <h4 className="ai-chat-title">🤖 AI Assistant</h4>
+                      <button
+                        className="ask-ai-btn"
+                        onClick={handleAskAI}
+                        disabled={
+                          isAiProcessing ||
+                          !currentSentence ||
+                          currentSentence.trim() === ""
+                        }
+                      >
+                        {isAiProcessing
+                          ? "🤔 Thinking..."
+                          : "🤖 Ask AI About Your Sentence"}
+                      </button>
+                      {!currentSentence || currentSentence.trim() === "" ? (
+                        <p className="ai-chat-hint">
+                          Sign a sentence first to ask the AI assistant!
+                        </p>
+                      ) : null}
+
+                      {aiResponse && (
+                        <div className="ai-response-bubble">
+                          <h4>🤖 AI Answer:</h4>
+                          <p>{aiResponse}</p>
+                          <button
+                            onClick={() => sendToTextToSign(aiResponse)}
+                            className="translate-to-sign-btn"
+                          >
+                            🤟 Translate Answer to Sign
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="speech-settings">
+                      <h4>Speech Settings:</h4>
+                      <div className="settings-controls">
+                        <label>
+                          Rate: {rate}
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="1.5"
+                            step="0.1"
+                            value={rate}
+                            onChange={(e) =>
+                              setRate(parseFloat(e.target.value))
+                            }
+                          />
+                        </label>
+                        <label>
+                          Pitch: {pitch}
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2"
+                            step="0.1"
+                            value={pitch}
+                            onChange={(e) =>
+                              setPitch(parseFloat(e.target.value))
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="sentence-history">
+                      <div className="history-header">
+                        <h4>Sentence History:</h4>
+                        <div className="history-buttons">
+                          <button
+                            onClick={clearAllHistory}
+                            className="clear-history-btn"
+                          >
+                            Clear All
+                          </button>
+                          <button
+                            onClick={exportSentenceHistory}
+                            className="export-history-btn"
+                          >
+                            Export
+                          </button>
+                        </div>
+                      </div>
+                      {sentenceHistory.length > 0 ? (
+                        <div className="history-list">
+                          {sentenceHistory.map((item) => (
+                            <div key={item.id} className="history-item">
+                              <span className="timestamp">{item.timestamp}</span>
+                              <span className="sentence">
+                                {formatSentenceForDisplay(item.sentence)}
+                              </span>
+                              <button
+                                onClick={() => sendToTextToSign(item.sentence)}
+                                className="convert-to-sign-btn small"
+                                title="Convert to signs"
+                              >
+                                🤟
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="no-sentences">
+                          No sentences completed yet. Start building your first
+                          sentence!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <TextToSign
+                    onSignGenerated={handleSignGenerated}
+                    isActive={true}
+                    externalPayload={textToSignPayload}
+                  />
+                </>
+              )}
             </div>
           </>
         ) : (
@@ -1148,6 +1281,7 @@ const Detect = () => {
     </>
   );
 };
+
 
 export default Detect;
 

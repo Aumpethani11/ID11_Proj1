@@ -68,6 +68,14 @@ const Navbar = ({ notifyMsg }) => {
             <Link to="/signlingo">SignLingo</Link>
           </p>
 
+          <p>
+            <Link to="/sign-user">Sign Chat</Link>
+          </p>
+
+          <p>
+            <Link to="/normal-user">Voice Chat</Link>
+          </p>
+
           {accessToken && (
             <p>
               <Link to="/dashboard">Dashboard</Link>
@@ -122,6 +130,14 @@ const Navbar = ({ notifyMsg }) => {
 
               <p>
                 <Link to="/signlingo">SignLingo</Link>
+              </p>
+
+              <p>
+                <Link to="/sign-user">Sign Chat</Link>
+              </p>
+
+              <p>
+                <Link to="/normal-user">Voice Chat</Link>
               </p>
 
               {accessToken && (

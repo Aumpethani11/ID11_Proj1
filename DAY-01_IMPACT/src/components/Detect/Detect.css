@@ -528,6 +528,49 @@ h1{
   font-style: italic;
 }
 
+.sentence-text--forming {
+  font-style: normal;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #7dffb3;
+  border-color: rgba(46, 204, 113, 0.45);
+  background: rgba(46, 204, 113, 0.08);
+}
+
+.forming-sentence-live {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  text-align: left;
+}
+
+.forming-sentence-live__label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  margin-bottom: 0.35rem;
+  color: #a8f0c6;
+}
+
+.forming-sentence-live__text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 1rem;
+  line-height: 1.45;
+  word-break: break-word;
+  min-height: 1.45em;
+}
+
+.forming-sentence-live__text.has-text {
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
 .sentence-actions {
   display: flex;
   gap: 0.5rem;
@@ -1428,3 +1471,164 @@ h1{
   }
 }
   
+/* Embedded SignInput layout (Sign User chat) */
+.signlang_detection-container--embedded {
+  min-height: auto;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  align-items: stretch;
+}
+
+.detect-main-layout--embedded {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  justify-content: stretch;
+}
+
+.detect-main-layout--embedded .detect-section {
+  flex: unset;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+}
+
+.detect-main-layout--embedded .signlang_webcam {
+  height: 220px;
+  min-height: 180px;
+}
+
+.detect-main-layout--embedded .section-title,
+.detect-main-layout--embedded .section-subtitle {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sentence-builder-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  opacity: 0.75;
+  color: #cfe8ff;
+}
+
+@media screen and (max-width: 1100px) {
+  .detect-main-layout--embedded {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detect-main-layout--embedded .sentence-builder-section {
+    grid-column: 1 / -1;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .detect-main-layout--embedded {
+    grid-template-columns: 1fr;
+  }
+
+  .detect-main-layout--embedded .sentence-builder-section {
+    grid-column: auto;
+  }
+
+  .detect-main-layout--embedded .signlang_webcam {
+    height: 200px;
+  }
+
+  .detect-main-layout--embedded .sentence-actions {
+    flex-direction: column;
+  }
+
+  .detect-main-layout--embedded .sentence-actions button {
+    width: 100%;
+  }
+}
+
+/* Chat embedded: shared forming banner + 2 panels only */
+.detect-main-layout--chat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.detect-main-layout--chat .forming-banner-shared {
+  grid-column: 1 / -1;
+}
+
+.forming-banner-shared {
+  margin-bottom: 0;
+}
+
+.forming-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.forming-banner-actions .complete-sentence-btn,
+.forming-banner-actions .clear-sentence-btn {
+  margin: 0;
+}
+
+.signlang_detection-container--embedded {
+  min-height: auto;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+.detect-main-layout--embedded .detect-section {
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+}
+
+.detect-main-layout--embedded .signlang_webcam {
+  height: 220px;
+}
+
+@media screen and (max-width: 800px) {
+  .detect-main-layout--chat {
+    grid-template-columns: 1fr;
+  }
+
+  .detect-main-layout--embedded .signlang_webcam {
+    height: 200px;
+  }
+
+  .forming-banner-actions {
+    flex-direction: column;
+  }
+
+  .forming-banner-actions button {
+    width: 100%;
+  }
+}
+
+/* Shared forming banner (same look as chat incoming-banner) */
+.signlang_detection-container--embedded .incoming-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  color: #e8f1f7;
+}
+
+.signlang_detection-container--embedded .incoming-banner h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.signlang_detection-container--embedded .incoming-banner p {
+  margin: 0;
+  font-size: 1.05rem;
+  word-break: break-word;
+}

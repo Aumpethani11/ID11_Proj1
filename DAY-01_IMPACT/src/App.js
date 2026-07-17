@@ -13,6 +13,8 @@ import {
   SpeechToText,
   SignLingo,
 } from "./components";
+import SignUser from "./pages/SignUser";
+import NormalUser from "./pages/NormalUser";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -149,6 +151,26 @@ function App() {
               element={
                 <Layout>
                   <SignLingo />
+                </Layout>
+              }
+            />
+
+            <Route
+              exact
+              path="/sign-user"
+              element={
+                <Layout>
+                  <SignUser />
+                </Layout>
+              }
+            />
+
+            <Route
+              exact
+              path="/normal-user"
+              element={
+                <Layout>
+                  <NormalUser />
                 </Layout>
               }
             />
