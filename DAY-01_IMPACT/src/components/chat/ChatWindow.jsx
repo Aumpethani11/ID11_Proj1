@@ -4,13 +4,6 @@ import "./Chat.css";
 
 /**
  * Session chat history for both user types.
- * @param {{
- *   messages: Array,
- *   currentUserType: 'sign' | 'normal',
- *   peerTyping?: boolean,
- *   peerName?: string,
- *   title?: string,
- * }} props
  */
 const ChatWindow = ({
   messages = [],
@@ -18,6 +11,7 @@ const ChatWindow = ({
   peerTyping = false,
   peerName = "Peer",
   title = "Conversation",
+  targetLang = "hi",
 }) => {
   const bottomRef = useRef(null);
 
@@ -43,6 +37,7 @@ const ChatWindow = ({
               key={msg.id}
               message={msg}
               isOwn={msg.senderType === currentUserType}
+              targetLang={targetLang}
             />
           ))
         )}

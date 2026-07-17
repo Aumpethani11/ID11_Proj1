@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ChatWindow from "../components/chat/ChatWindow";
 import VoiceInput from "../components/chat/VoiceInput";
+import TranslateControls from "../components/chat/TranslateControls";
+import { translateTextWithGroq } from "../utils/groqTranslation";
 import {
   disconnectSocket,
   emitTyping,
@@ -11,7 +13,6 @@ import "../components/chat/Chat.css";
 
 /**
  * Normal User page: mic / typed text → Socket.IO → Sign User.
- * Receives sign-translated messages in the chat window (text only, no TTS).
  */
 const NormalUser = () => {
   const [roomId, setRoomId] = useState("ROOM1");
@@ -22,12 +23,50 @@ const NormalUser = () => {
   const [peers, setPeers] = useState([]);
   const [peerTyping, setPeerTyping] = useState(false);
   const [status, setStatus] = useState("Not connected");
+  const [targetLang, setTargetLang] = useState("hi");
+  const [autoTranslate, setAutoTranslate] = useState(false);
+  const targetLangRef = useRef(targetLang);
+  const autoTranslateRef = useRef(autoTranslate);
+
+  useEffect(() => {
+    targetLangRef.current = targetLang;
+  }, [targetLang]);
+
+  useEffect(() => {
+    autoTranslateRef.current = autoTranslate;
+  }, [autoTranslate]);
 
   const appendMessage = useCallback((message) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
       return [...prev, message];
     });
+  }, []);
+
+  const translateIncoming = useCallback(async (message) => {
+    if (message.senderType === "normal") return;
+    if (!autoTranslateRef.current || !message.text?.trim()) return;
+
+    try {
+      const translated = await translateTextWithGroq(
+        message.text.trim(),
+        "auto",
+        targetLangRef.current
+      );
+      if (!translated || /not configured|unavailable|error/i.test(translated)) {
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, translatedText: translated.trim() }
+            : m
+        )
+      );
+    } catch (err) {
+      console.error("Auto-translate failed:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -87,6 +126,7 @@ const NormalUser = () => {
     socket.on("receive-message", (message) => {
       appendMessage(message);
       setPeerTyping(false);
+      translateIncoming(message);
     });
   };
 
@@ -170,12 +210,19 @@ const NormalUser = () => {
         </div>
 
         <div className="chat-panel">
+          <TranslateControls
+            targetLang={targetLang}
+            onTargetLangChange={setTargetLang}
+            autoTranslate={autoTranslate}
+            onAutoTranslateChange={setAutoTranslate}
+          />
           <ChatWindow
             messages={messages}
             currentUserType="normal"
             peerTyping={peerTyping}
             peerName="Sign User"
             title="Live chat"
+            targetLang={targetLang}
           />
         </div>
       </div>

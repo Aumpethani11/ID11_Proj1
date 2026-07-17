@@ -987,8 +987,17 @@ const Detect = ({
                     className="language-dropdown"
                   >
                     <option value="en-US">English (US)</option>
+                    <option value="en-IN">English (India)</option>
+                    <option value="hi-IN">हिन्दी (Hindi)</option>
                     <option value="gu-IN">ગુજરાતી (Gujarati)</option>
-                    <option value="hi-IN">हिंदी (Hindi)</option>
+                    <option value="bn-IN">বাংলা (Bengali)</option>
+                    <option value="ta-IN">தமிழ் (Tamil)</option>
+                    <option value="te-IN">తెలుగు (Telugu)</option>
+                    <option value="mr-IN">मराठी (Marathi)</option>
+                    <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml-IN">മലയാളം (Malayalam)</option>
+                    <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
+                    <option value="ur-IN">اردو (Urdu)</option>
                   </select>
                 </div>
 

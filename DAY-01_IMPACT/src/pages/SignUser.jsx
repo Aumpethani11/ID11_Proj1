@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ChatWindow from "../components/chat/ChatWindow";
 import SignInput from "../components/chat/SignInput";
+import TranslateControls from "../components/chat/TranslateControls";
+import { translateTextWithGroq } from "../utils/groqTranslation";
 import {
   disconnectSocket,
   joinRoom,
@@ -10,7 +12,6 @@ import "../components/chat/Chat.css";
 
 /**
  * Sign User page: webcam signs → text → Socket.IO peer.
- * Incoming text is shown in chat (no TTS / Text-to-Sign).
  */
 const SignUser = () => {
   const [roomId, setRoomId] = useState("ROOM1");
@@ -20,13 +21,51 @@ const SignUser = () => {
   const [messages, setMessages] = useState([]);
   const [peers, setPeers] = useState([]);
   const [status, setStatus] = useState("Not connected");
+  const [targetLang, setTargetLang] = useState("hi");
+  const [autoTranslate, setAutoTranslate] = useState(false);
   const lastSentRef = useRef("");
+  const targetLangRef = useRef(targetLang);
+  const autoTranslateRef = useRef(autoTranslate);
+
+  useEffect(() => {
+    targetLangRef.current = targetLang;
+  }, [targetLang]);
+
+  useEffect(() => {
+    autoTranslateRef.current = autoTranslate;
+  }, [autoTranslate]);
 
   const appendMessage = useCallback((message) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
       return [...prev, message];
     });
+  }, []);
+
+  const translateIncoming = useCallback(async (message) => {
+    if (message.senderType === "sign") return;
+    if (!autoTranslateRef.current || !message.text?.trim()) return;
+
+    try {
+      const translated = await translateTextWithGroq(
+        message.text.trim(),
+        "auto",
+        targetLangRef.current
+      );
+      if (!translated || /not configured|unavailable|error/i.test(translated)) {
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, translatedText: translated.trim() }
+            : m
+        )
+      );
+    } catch (err) {
+      console.error("Auto-translate failed:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -80,6 +119,7 @@ const SignUser = () => {
 
     socket.on("receive-message", (message) => {
       appendMessage(message);
+      translateIncoming(message);
     });
   };
 
@@ -172,10 +212,17 @@ const SignUser = () => {
         </div>
 
         <div className="chat-panel">
+          <TranslateControls
+            targetLang={targetLang}
+            onTargetLangChange={setTargetLang}
+            autoTranslate={autoTranslate}
+            onAutoTranslateChange={setAutoTranslate}
+          />
           <ChatWindow
             messages={messages}
             currentUserType="sign"
             title="Live chat"
+            targetLang={targetLang}
           />
         </div>
       </div>
