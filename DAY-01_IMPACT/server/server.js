@@ -1,23 +1,39 @@
+require("dotenv").config();
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "*";
+
+// CLIENT_ORIGIN can be "*", a single URL, or a comma-separated list of URLs.
+const rawOrigin = process.env.CLIENT_ORIGIN || "*";
+const allowedOrigins =
+  rawOrigin === "*"
+    ? true
+    : rawOrigin
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+const corsOptions = {
+  origin: allowedOrigins,
+  methods: ["GET", "POST"],
+};
 
 const app = express();
-app.use(cors({ origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN }));
+app.use(cors(corsOptions));
+app.get("/", (_req, res) => {
+  res.send("Sign Language chat server is running.");
+});
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "sign-language-chat-server" });
 });
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN,
-    methods: ["GET", "POST"],
-  },
+  cors: corsOptions,
 });
 
 /** @type {Map<string, Map<string, { userType: string, userName: string }>>} */
@@ -106,5 +122,8 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Sign Language chat server running on http://localhost:${PORT}`);
+  console.log(`Sign Language chat server running on port ${PORT}`);
+  console.log(
+    `Allowed client origin(s): ${rawOrigin === "*" ? "* (all)" : rawOrigin}`
+  );
 });
