@@ -15,6 +15,7 @@ import {
 } from "./components";
 import SignUser from "./pages/SignUser";
 import NormalUser from "./pages/NormalUser";
+import RequireAuth from "./components/auth/RequireAuth";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -110,7 +111,9 @@ function App() {
               path="/detect"
               element={
                 <Layout>
-                  <Detect />
+                  <RequireAuth pageName="Detect">
+                    <Detect />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -120,7 +123,9 @@ function App() {
               path="/resources"
               element={
                 <Layout>
-                  <Resources />
+                  <RequireAuth pageName="Resources">
+                    <Resources />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -130,7 +135,9 @@ function App() {
               path="/speech-to-text"
               element={
                 <Layout>
-                  <SpeechToText />
+                  <RequireAuth pageName="Speech to Text">
+                    <SpeechToText />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -140,7 +147,9 @@ function App() {
               path="/dashboard"
               element={
                 <Layout>
-                  <Dashboard />
+                  <RequireAuth pageName="Dashboard">
+                    <Dashboard />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -150,7 +159,9 @@ function App() {
               path="/signlingo"
               element={
                 <Layout>
-                  <SignLingo />
+                  <RequireAuth pageName="SignLingo">
+                    <SignLingo />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -160,7 +171,9 @@ function App() {
               path="/sign-user"
               element={
                 <Layout>
-                  <SignUser />
+                  <RequireAuth pageName="Sign Chat">
+                    <SignUser />
+                  </RequireAuth>
                 </Layout>
               }
             />
@@ -170,7 +183,9 @@ function App() {
               path="/normal-user"
               element={
                 <Layout>
-                  <NormalUser />
+                  <RequireAuth pageName="Voice Chat">
+                    <NormalUser />
+                  </RequireAuth>
                 </Layout>
               }
             />
